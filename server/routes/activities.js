@@ -182,7 +182,7 @@ function parseActivitiesFromResponse(responseText) {
  */
 router.post('/', async (req, res) => {
   try {
-    const { eventType, city, kidAges, availability, maxDistance, preferences } = req.body;
+    const { eventType, city, kidAges, availability, maxDistance, preferences, preferenceContext } = req.body;
 
     // Validate required fields
     if (!city || !kidAges || !availability) {
@@ -194,11 +194,19 @@ router.post('/', async (req, res) => {
 
     const isDining = eventType === 'dining';
     console.log('📥 Received request:', { eventType, city, kidAges, availability, maxDistance, preferences });
+    if (preferenceContext) {
+      console.log('🧠 Preference context included:', preferenceContext.substring(0, 100) + '...');
+    }
 
     // Build the appropriate prompt based on event type
-    const prompt = isDining
+    let prompt = isDining
       ? buildDiningPrompt({ city, kidAges, availability, maxDistance, preferences })
       : buildPrompt({ city, kidAges, availability, maxDistance, preferences });
+
+    // Append preference context if provided
+    if (preferenceContext) {
+      prompt += `\n\n${preferenceContext}`;
+    }
 
     console.log(`🤖 Calling Claude API for ${isDining ? 'DINING' : 'ACTIVITIES'} search...`);
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import ResultsList from './components/ResultsList';
+import { usePreferences } from './hooks/usePreferences';
 import './App.css';
 
 const API_URL = 'http://localhost:3001';
@@ -32,6 +33,16 @@ function App() {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Preference learning hook
+  const {
+    addReaction,
+    getReactionForActivity,
+    matchesPreferences,
+    buildPreferenceContext,
+    clearPreferences,
+    reactionCount
+  } = usePreferences();
+
   const handleFormChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
@@ -59,6 +70,9 @@ function App() {
     const formattedDate = formatDateForDisplay(formData.date);
     const availability = `${formattedDate}, ${formData.timeOfDay}`;
 
+    // Build preference context for personalized recommendations
+    const preferenceContext = buildPreferenceContext();
+
     try {
       const response = await fetch(`${API_URL}/api/activities`, {
         method: 'POST',
@@ -67,7 +81,8 @@ function App() {
         },
         body: JSON.stringify({
           ...formData,
-          availability  // Send combined date + time
+          availability,  // Send combined date + time
+          preferenceContext  // Send learned preferences (null if none)
         })
       });
 
@@ -139,7 +154,16 @@ function App() {
               </button>
             </div>
           ) : hasSearched && activities.length > 0 ? (
-            <ResultsList activities={activities} />
+            <ResultsList
+              activities={activities}
+              addReaction={addReaction}
+              getReactionForActivity={getReactionForActivity}
+              matchesPreferences={matchesPreferences}
+              searchContext={{
+                eventType: formData.eventType,
+                cuisineType: formData.eventType === 'dining' ? formData.preferences : null
+              }}
+            />
           ) : hasSearched && activities.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🔍</div>
@@ -155,6 +179,17 @@ function App() {
           )}
         </div>
       </main>
+
+      {reactionCount > 0 && (
+        <footer className="app-footer">
+          <div className="preference-status">
+            <span className="learning-indicator">🧠 Learning from {reactionCount} reaction{reactionCount !== 1 ? 's' : ''}</span>
+            <button className="clear-preferences-btn" onClick={clearPreferences}>
+              Clear Preferences
+            </button>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
