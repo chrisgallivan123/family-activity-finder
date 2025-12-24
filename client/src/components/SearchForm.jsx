@@ -1,17 +1,36 @@
-function SearchForm({ formData, onFormChange, onSubmit, onClear }) {
+function SearchForm({ formData, onFormChange, onSubmit, onClear, isLoading }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     onFormChange(name, value);
   };
+
+  // Get today's date in YYYY-MM-DD format for the date picker min value
+  const today = new Date().toISOString().split('T')[0];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit();
   };
 
+  const isDining = formData.eventType === 'dining';
+
   return (
     <div className="form-card">
       <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="eventType">🎯 What are you looking for?</label>
+          <select
+            id="eventType"
+            name="eventType"
+            value={formData.eventType}
+            onChange={handleChange}
+            required
+          >
+            <option value="activity">🎪 Family Activities</option>
+            <option value="dining">🍽️ Family Dining</option>
+          </select>
+        </div>
+
         <div className="form-group">
           <label htmlFor="city">📍 City</label>
           <input
@@ -39,16 +58,32 @@ function SearchForm({ formData, onFormChange, onSubmit, onClear }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="availability">📅 Date & Time</label>
+          <label htmlFor="date">📅 Date</label>
           <input
-            type="text"
-            id="availability"
-            name="availability"
-            value={formData.availability}
+            type="date"
+            id="date"
+            name="date"
+            value={formData.date}
             onChange={handleChange}
-            placeholder="e.g., Sunday afternoon"
+            min={today}
             required
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="timeOfDay">🕐 Time of Day</label>
+          <select
+            id="timeOfDay"
+            name="timeOfDay"
+            value={formData.timeOfDay}
+            onChange={handleChange}
+            required
+          >
+            <option value="morning">Morning (before noon)</option>
+            <option value="afternoon">Afternoon (12pm - 5pm)</option>
+            <option value="evening">Evening (after 5pm)</option>
+            <option value="all day">All Day</option>
+          </select>
         </div>
 
         <div className="form-group">
@@ -67,22 +102,30 @@ function SearchForm({ formData, onFormChange, onSubmit, onClear }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="preferences">✨ Preferences (optional)</label>
+          <label htmlFor="preferences">
+            {isDining ? '🍽️ Cuisine Type (optional)' : '✨ Preferences (optional)'}
+          </label>
           <textarea
             id="preferences"
             name="preferences"
             value={formData.preferences}
             onChange={handleChange}
-            placeholder="e.g., indoor, educational, budget-friendly"
+            placeholder={isDining
+              ? "e.g., Italian, Sushi, BBQ, Mexican, Brunch"
+              : "e.g., indoor, educational, budget-friendly"}
             rows="3"
           />
         </div>
 
         <div className="button-group">
-          <button type="submit" className="btn-primary">
-            🔍 Search Activities
+          <button type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading
+              ? '⏳ Searching...'
+              : isDining
+                ? '🔍 Search Restaurants'
+                : '🔍 Search Activities'}
           </button>
-          <button type="button" className="btn-secondary" onClick={onClear}>
+          <button type="button" className="btn-secondary" onClick={onClear} disabled={isLoading}>
             Clear
           </button>
         </div>
