@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'familyActivityPreferences';
-const PREFERENCE_VERSION = 1;
+const PREFERENCE_VERSION = 2;
 
 // Category keywords to extract from activity titles/descriptions
 // Focus on QUALITIES that drive preferences, not just types
@@ -75,12 +75,21 @@ function extractCategories(activity) {
 
 /**
  * Load preferences from localStorage
+ * Handles migration from older versions
  */
 function loadPreferences() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const data = JSON.parse(stored);
+      // Handle migration from version 1 to version 2
+      if (data.version === 1) {
+        return {
+          version: PREFERENCE_VERSION,
+          reactions: data.reactions || [],
+          favoriteDishes: []  // New field in v2
+        };
+      }
       if (data.version === PREFERENCE_VERSION) {
         return data;
       }
@@ -88,7 +97,7 @@ function loadPreferences() {
   } catch (e) {
     console.warn('Failed to load preferences:', e);
   }
-  return { version: PREFERENCE_VERSION, reactions: [] };
+  return { version: PREFERENCE_VERSION, reactions: [], favoriteDishes: [] };
 }
 
 /**
@@ -228,55 +237,111 @@ export function usePreferences() {
    * Build a preference context string to include in Claude prompts
    */
   const buildPreferenceContext = useCallback(() => {
-    if (preferences.reactions.length === 0) {
+    const hasDishes = preferences.favoriteDishes && preferences.favoriteDishes.length > 0;
+    const hasReactions = preferences.reactions.length > 0;
+
+    if (!hasReactions && !hasDishes) {
       return null;
     }
 
-    // Count reactions by category
-    const liked = {};
-    const disliked = {};
+    let context = '';
 
-    for (const reaction of preferences.reactions) {
-      const target = reaction.reaction > 0 ? liked : disliked;
-      for (const cat of reaction.categories) {
-        target[cat] = (target[cat] || 0) + 1;
+    // Add reaction-based preferences
+    if (hasReactions) {
+      // Count reactions by category
+      const liked = {};
+      const disliked = {};
+
+      for (const reaction of preferences.reactions) {
+        const target = reaction.reaction > 0 ? liked : disliked;
+        for (const cat of reaction.categories) {
+          target[cat] = (target[cat] || 0) + 1;
+        }
+      }
+
+      // Build lists of strong preferences (2+ reactions)
+      const strongLikes = Object.entries(liked)
+        .filter(([_, count]) => count >= 2)
+        .map(([cat]) => CATEGORY_DESCRIPTIONS[cat] || cat.replace(/-/g, ' '));
+
+      const strongDislikes = Object.entries(disliked)
+        .filter(([_, count]) => count >= 2)
+        .map(([cat]) => CATEGORY_DESCRIPTIONS[cat] || cat.replace(/-/g, ' '));
+
+      if (strongLikes.length > 0 || strongDislikes.length > 0) {
+        context += '**Family Preference History:**\n';
+
+        if (strongLikes.length > 0) {
+          context += `The family tends to enjoy: ${strongLikes.join(', ')}\n`;
+        }
+
+        if (strongDislikes.length > 0) {
+          context += `The family tends to avoid: ${strongDislikes.join(', ')}\n`;
+        }
       }
     }
 
-    // Build lists of strong preferences (2+ reactions)
-    const strongLikes = Object.entries(liked)
-      .filter(([_, count]) => count >= 2)
-      .map(([cat]) => CATEGORY_DESCRIPTIONS[cat] || cat.replace(/-/g, ' '));
-
-    const strongDislikes = Object.entries(disliked)
-      .filter(([_, count]) => count >= 2)
-      .map(([cat]) => CATEGORY_DESCRIPTIONS[cat] || cat.replace(/-/g, ' '));
-
-    if (strongLikes.length === 0 && strongDislikes.length === 0) {
-      return null;
+    // Add favorite dishes
+    if (hasDishes) {
+      if (context) context += '\n';
+      context += '**Favorite Dishes:**\n';
+      context += `The family loves these dishes: ${preferences.favoriteDishes.join(', ')}\n`;
+      context += 'Prioritize restaurants known for these dishes or similar items. ';
+      context += 'If a restaurant is famous for any of these dishes, mention it prominently in the description.\n';
     }
 
-    let context = '**Family Preference History:**\n';
-
-    if (strongLikes.length > 0) {
-      context += `The family tends to enjoy: ${strongLikes.join(', ')}\n`;
+    if (context) {
+      context += '\nWhen ranking results, give higher priority to options matching these preferences, ';
+      context += 'but ALWAYS include at least 1-2 options outside their usual interests for discovery.';
     }
 
-    if (strongDislikes.length > 0) {
-      context += `The family tends to avoid: ${strongDislikes.join(', ')}\n`;
-    }
+    return context || null;
+  }, [preferences.reactions, preferences.favoriteDishes]);
 
-    context += '\nWhen ranking results, give higher priority to options matching these preferences, ';
-    context += 'but ALWAYS include at least 1-2 options outside their usual interests for discovery.';
+  /**
+   * Add a dish to the favorites list
+   * @param {string} dishName - Name of the dish to add
+   */
+  const addDish = useCallback((dishName) => {
+    const trimmed = dishName.trim();
+    if (!trimmed) return;
 
-    return context;
-  }, [preferences.reactions]);
+    setPreferences(prev => {
+      // Don't add duplicates (case-insensitive check)
+      if (prev.favoriteDishes.some(d => d.toLowerCase() === trimmed.toLowerCase())) {
+        return prev;
+      }
+      return {
+        ...prev,
+        favoriteDishes: [...prev.favoriteDishes, trimmed]
+      };
+    });
+  }, []);
+
+  /**
+   * Remove a dish from the favorites list
+   * @param {string} dishName - Name of the dish to remove
+   */
+  const removeDish = useCallback((dishName) => {
+    setPreferences(prev => ({
+      ...prev,
+      favoriteDishes: prev.favoriteDishes.filter(d => d !== dishName)
+    }));
+  }, []);
+
+  /**
+   * Get all favorite dishes
+   * @returns {string[]} Array of favorite dish names
+   */
+  const getFavoriteDishes = useCallback(() => {
+    return preferences.favoriteDishes || [];
+  }, [preferences.favoriteDishes]);
 
   /**
    * Clear all stored preferences
    */
   const clearPreferences = useCallback(() => {
-    setPreferences({ version: PREFERENCE_VERSION, reactions: [] });
+    setPreferences({ version: PREFERENCE_VERSION, reactions: [], favoriteDishes: [] });
   }, []);
 
   /**
@@ -290,7 +355,11 @@ export function usePreferences() {
     matchesPreferences,
     buildPreferenceContext,
     clearPreferences,
-    reactionCount
+    reactionCount,
+    // Favorite dishes functions
+    addDish,
+    removeDish,
+    getFavoriteDishes
   };
 }
 

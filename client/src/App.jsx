@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SearchForm from './components/SearchForm';
 import ResultsList from './components/ResultsList';
+import FavoriteDishes from './components/FavoriteDishes';
 import { usePreferences } from './hooks/usePreferences';
 import './App.css';
 
@@ -33,6 +34,9 @@ function App() {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Dishes modal state
+  const [isDishesModalOpen, setIsDishesModalOpen] = useState(false);
+
   // Preference learning hook
   const {
     addReaction,
@@ -40,8 +44,13 @@ function App() {
     matchesPreferences,
     buildPreferenceContext,
     clearPreferences,
-    reactionCount
+    reactionCount,
+    addDish,
+    removeDish,
+    getFavoriteDishes
   } = usePreferences();
+
+  const favoriteDishes = getFavoriteDishes();
 
   const handleFormChange = (name, value) => {
     setFormData(prev => ({
@@ -159,6 +168,7 @@ function App() {
               addReaction={addReaction}
               getReactionForActivity={getReactionForActivity}
               matchesPreferences={matchesPreferences}
+              favoriteDishes={favoriteDishes}
               searchContext={{
                 eventType: formData.eventType,
                 cuisineType: formData.eventType === 'dining' ? formData.preferences : null
@@ -180,16 +190,29 @@ function App() {
         </div>
       </main>
 
-      {reactionCount > 0 && (
+      {(reactionCount > 0 || favoriteDishes.length > 0) && (
         <footer className="app-footer">
           <div className="preference-status">
-            <span className="learning-indicator">🧠 Learning from {reactionCount} reaction{reactionCount !== 1 ? 's' : ''}</span>
+            {reactionCount > 0 && (
+              <span className="learning-indicator">🧠 {reactionCount} reaction{reactionCount !== 1 ? 's' : ''}</span>
+            )}
+            <button className="dishes-link" onClick={() => setIsDishesModalOpen(true)}>
+              🍜 Favorite Dishes ({favoriteDishes.length})
+            </button>
             <button className="clear-preferences-btn" onClick={clearPreferences}>
-              Clear Preferences
+              Clear All
             </button>
           </div>
         </footer>
       )}
+
+      <FavoriteDishes
+        isOpen={isDishesModalOpen}
+        onClose={() => setIsDishesModalOpen(false)}
+        dishes={favoriteDishes}
+        onAddDish={addDish}
+        onRemoveDish={removeDish}
+      />
     </div>
   );
 }

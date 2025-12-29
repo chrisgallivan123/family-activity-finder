@@ -78,47 +78,97 @@
 
 ---
 
-# Milestone 4: Family Preference Learning (localStorage)
+# Milestone 4: Family Preference Learning (localStorage) ✅
 
 ## Goal
 Learn what the family enjoys over time using thumbs up/down reactions. Recommendations improve while preserving discovery (always include surprises).
 
 ## Hook Creation
-- [ ] Create `/client/src/hooks/usePreferences.js`
-- [ ] Implement `addReaction(activity, reaction)` - save thumbs up (+1) or down (-1)
-- [ ] Implement `getReactionForActivity(title)` - check existing reactions
-- [ ] Implement `buildPreferenceContext()` - generate prompt text from patterns
-- [ ] Implement `clearPreferences()` - reset all data
-- [ ] Add category extraction logic (zoo, museum, outdoor, dining, etc.)
+- [x] Create `/client/src/hooks/usePreferences.js`
+- [x] Implement `addReaction(activity, reaction)` - save thumbs up (+1) or down (-1)
+- [x] Implement `getReactionForActivity(title)` - check existing reactions
+- [x] Implement `buildPreferenceContext()` - generate prompt text from patterns
+- [x] Implement `clearPreferences()` - reset all data
+- [x] Add category extraction logic (qualities: menu, ambience, authenticity)
 
 ## UI Changes
-- [ ] Add thumbs up/down buttons to each result card in `ResultsList.jsx`
-- [ ] Show filled vs outline icon based on existing reaction
-- [ ] Add visual feedback animation on reaction click
-- [ ] Add "Matches your interests" badge when activity matches preferences
-- [ ] Add "Clear Preferences" link in footer/settings
+- [x] Add thumbs up/down buttons to each result card in `ResultsList.jsx`
+- [x] Show filled vs outline icon based on existing reaction
+- [x] Add visual feedback animation on reaction click
+- [x] Add "Matches your interests" badge when activity matches preferences
+- [x] Add "Clear Preferences" link in footer
+- [x] Add "What did you like?" prompt (Menu/Ambience/Authenticity)
 
 ## App Integration
-- [ ] Import and use `usePreferences` hook in `App.jsx`
-- [ ] Pass reaction functions to `ResultsList` as props
-- [ ] Call `buildPreferenceContext()` before API call
-- [ ] Include `preferenceContext` in API request body
+- [x] Import and use `usePreferences` hook in `App.jsx`
+- [x] Pass reaction functions to `ResultsList` as props
+- [x] Call `buildPreferenceContext()` before API call
+- [x] Include `preferenceContext` in API request body
 
 ## Backend Changes
-- [ ] Accept optional `preferenceContext` field in `/api/activities`
-- [ ] Append preference context to activity prompt
-- [ ] Append preference context to dining prompt
-- [ ] Ensure prompts request 1-2 discoveries outside known preferences
+- [x] Accept optional `preferenceContext` field in `/api/activities`
+- [x] Append preference context to activity prompt
+- [x] Append preference context to dining prompt
+- [x] Ensure prompts request 1-2 discoveries outside known preferences
 
 ## Styling
-- [ ] Style thumbs up/down buttons (hover, active states)
-- [ ] Style preference match badge
-- [ ] Add reaction animation CSS
+- [x] Style thumbs up/down buttons (hover, active states)
+- [x] Style preference match badge
+- [x] Add reaction animation CSS
+- [x] Style "What did you like?" prompt
 
 ## Testing
-- [ ] Thumbs buttons appear on results
-- [ ] Clicking saves to localStorage
-- [ ] Preference badge appears for matching activities
-- [ ] Preferences included in API request
-- [ ] Recommendations prioritize (but don't exclude) based on preferences
-- [ ] Clear preferences works
+- [x] Thumbs buttons appear on results
+- [x] Clicking saves to localStorage
+- [x] Preference badge appears for matching activities
+- [x] Preferences included in API request
+- [x] Recommendations prioritize (but don't exclude) based on preferences
+- [x] Clear preferences works
+
+---
+
+# Milestone 5: Favorite Dishes Feature ✅
+
+## Goal
+Allow users to track favorite dishes. Use dish preferences to improve recommendations - highlight restaurants known for dishes the family loves.
+
+## Data Structure
+- [x] Update `usePreferences.js` to store `favoriteDishes` array
+- [x] Bump preference version to handle migration
+- [x] Add `addDish(dishName)` function
+- [x] Add `removeDish(dishName)` function
+- [x] Add `getFavoriteDishes()` function
+
+## UI - Dishes Modal
+- [x] Create `FavoriteDishes.jsx` modal component
+- [x] Display existing dishes as removable chips
+- [x] Add text input for new dish
+- [x] Add helper text explaining how dishes are used
+
+## Footer Integration
+- [x] Update footer to show dish count: "🍜 Favorite Dishes (3)"
+- [x] Clicking opens dishes modal
+- [x] Update "Clear All" to also clear dishes
+
+## Preference Context
+- [x] Update `buildPreferenceContext()` to include dishes
+- [x] Format: "The family loves these dishes: Pad Thai, Ramen, Tacos"
+- [x] Instruct Claude to prioritize restaurants known for these dishes
+
+## Enhanced Badge
+- [x] Check if restaurant description mentions a favorite dish
+- [x] Show specific badge: "⭐ Known for Pad Thai - your favorite!"
+- [x] Falls back to generic badge if no dish match
+
+## Styling
+- [x] Style dishes modal
+- [x] Style dish chips with remove button
+- [x] Style dish input field
+
+## Testing
+- [x] Can add dishes to favorites list
+- [x] Can remove dishes from list
+- [x] Dishes persist in localStorage
+- [x] Dishes included in Claude prompt
+- [x] Badge shows when restaurant known for favorite dish
+- [x] Clear all removes dishes too

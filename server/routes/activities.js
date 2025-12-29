@@ -220,11 +220,11 @@ router.post('/', async (req, res) => {
       try {
         response = await client.messages.create({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 16000,
+          max_tokens: 4096,
           tools: [{
             type: 'web_search_20250305',
             name: 'web_search',
-            max_uses: 5
+            max_uses: 2
           }],
           messages: [{ role: 'user', content: prompt }]
         });

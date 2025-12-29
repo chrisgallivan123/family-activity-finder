@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function ResultsList({ activities, addReaction, getReactionForActivity, matchesPreferences, searchContext = {} }) {
+function ResultsList({ activities, addReaction, getReactionForActivity, matchesPreferences, favoriteDishes = [], searchContext = {} }) {
   // Track which cards just had a reaction for animation
   const [animatingCard, setAnimatingCard] = useState(null);
   // Track which card is showing the "what did you like?" prompt
@@ -14,6 +14,21 @@ function ResultsList({ activities, addReaction, getReactionForActivity, matchesP
       excludes.push(searchContext.cuisineType);
     }
     return excludes;
+  };
+
+  // Check if a restaurant's description mentions any favorite dish
+  const findMatchingDish = (activity) => {
+    if (!favoriteDishes || favoriteDishes.length === 0) return null;
+
+    const text = `${activity.title} ${activity.description}`.toLowerCase();
+
+    for (const dish of favoriteDishes) {
+      // Check for the dish name in the text (case-insensitive)
+      if (text.includes(dish.toLowerCase())) {
+        return dish;
+      }
+    }
+    return null;
   };
 
   const getRankColor = (index) => {
@@ -66,15 +81,27 @@ function ResultsList({ activities, addReaction, getReactionForActivity, matchesP
           const currentReaction = getReactionForActivity ? getReactionForActivity(activity.title) : null;
           const excludeCategories = getExcludeCategories();
           const isMatch = matchesPreferences ? matchesPreferences(activity, { excludeCategories }) : false;
+          const matchingDish = findMatchingDish(activity);
           const isAnimating = animatingCard === activity.title;
           const isAskingWhy = askingWhyCard === activity.title;
 
+          // Determine badge content
+          // For dining: ONLY show badge for dish matches (quality matches are too generic)
+          // For activities: show badge for both dish and quality matches
+          const isDining = searchContext.eventType === 'dining';
+          const showBadge = isDining
+            ? (matchingDish && !isAskingWhy)  // Dining: dish matches only
+            : ((matchingDish || isMatch) && !isAskingWhy);  // Activities: both
+          const badgeText = matchingDish
+            ? `Known for ${matchingDish} - your favorite!`
+            : 'Matches your interests';
+
           return (
             <div className={`result-card ${isAnimating ? 'card-pulse' : ''}`} key={index}>
-              {isMatch && !isAskingWhy && (
+              {showBadge && (
                 <div className="preference-badge">
                   <span className="badge-icon">⭐</span>
-                  <span className="badge-text">Matches your interests</span>
+                  <span className="badge-text">{badgeText}</span>
                 </div>
               )}
               <div
